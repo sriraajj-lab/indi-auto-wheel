@@ -290,6 +290,27 @@ Based on the wheel strategy rules and risk parameters, what trades should I make
   return parsed.decisions || [];
 }
 
+// ── Simulated Data (Test Mode) ───────────────────────────────────────
+
+/** Generate realistic simulated price data for testing */
+function generateSimulatedPrices(symbol: string): number[] {
+  const basePrices: Record<string, number> = {
+    RELIANCE: 2450, HDFCBANK: 1680, TCS: 3850, INFY: 1520,
+    ICICIBANK: 1050, SBIN: 780, ITC: 440,
+  };
+  const base = basePrices[symbol] || 1000;
+  const prices: number[] = [];
+  let price = base * (0.95 + Math.random() * 0.1); // start within ±5%
+
+  for (let i = 0; i < 100; i++) {
+    // Random walk with slight upward bias
+    const change = price * (Math.random() * 0.03 - 0.013);
+    price = Math.max(price * 0.8, price + change);
+    prices.push(Math.round(price * 100) / 100);
+  }
+  return prices;
+}
+
 // ── Main Engine ──────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -301,14 +322,23 @@ serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+  // Parse test mode from body
+  let testMode = false;
   try {
-    // 1. Check market hours
-    if (!isMarketOpen()) {
+    const body = await req.json();
+    testMode = body?.test === true;
+  } catch { /* no body or invalid JSON */ }
+
+  try {
+    // 1. Check market hours (skip in test mode)
+    if (!testMode && !isMarketOpen()) {
       console.log("Market is closed. Skipping engine run.");
       return new Response(JSON.stringify({ status: "market_closed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    if (testMode) console.log("🧪 TEST MODE — market hours check bypassed, using simulated data");
 
     // 2. Fetch all active users with bot enabled
     const { data: activeSettings, error: settingsErr } = await supabase
@@ -332,9 +362,10 @@ serve(async (req) => {
       const userId = settings.user_id;
       const apiKey = settings.broker_api_key;
       const accessToken = settings.broker_access_token;
+      const useSimulated = testMode || !apiKey || !accessToken;
 
-      // Check broker credentials
-      if (!apiKey || !accessToken) {
+      // In production, skip users without broker creds
+      if (!testMode && !apiKey || !testMode && !accessToken) {
         await supabase.from("bot_logs").insert({
           user_id: userId,
           log_type: "ERROR",
@@ -343,8 +374,8 @@ serve(async (req) => {
         continue;
       }
 
-      // Check token expiry
-      if (settings.broker_access_token_expires_at) {
+      // Check token expiry (skip in test/simulated mode)
+      if (!useSimulated && settings.broker_access_token_expires_at) {
         const expiresAt = new Date(settings.broker_access_token_expires_at);
         if (expiresAt < new Date()) {
           await supabase.from("bot_logs").insert({
@@ -385,12 +416,17 @@ serve(async (req) => {
       // Analyze each approved stock
       const analyses: StockAnalysis[] = [];
       for (const symbol of settings.approved_stocks) {
-        const prices = await fetchKiteHistorical(symbol, accessToken, apiKey);
+        let prices: number[] | null;
+        if (useSimulated) {
+          prices = generateSimulatedPrices(symbol);
+          console.log(`🧪 Using simulated data for ${symbol}`);
+        } else {
+          prices = await fetchKiteHistorical(symbol, accessToken!, apiKey!);
+        }
         if (!prices || prices.length < 30) {
           console.log(`Insufficient data for ${symbol}, skipping.`);
           continue;
         }
-
         const rsi = calcRSI(prices);
         const ema = emaCloudStatus(prices);
         const currentPrice = prices[prices.length - 1];
