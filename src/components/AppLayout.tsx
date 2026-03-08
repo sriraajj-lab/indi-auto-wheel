@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useTradeNotifications } from '@/hooks/useTradeNotifications';
+import NotificationBell from '@/components/NotificationBell';
 import { Activity, LayoutDashboard, Settings, ScrollText, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
