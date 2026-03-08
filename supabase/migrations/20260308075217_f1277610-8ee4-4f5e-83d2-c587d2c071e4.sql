@@ -1,0 +1,2 @@
+ALTER TABLE public.trades DROP CONSTRAINT trades_trade_type_check;
+ALTER TABLE public.trades ADD CONSTRAINT trades_trade_type_check CHECK (trade_type = ANY (ARRAY['SELL_PUT','SELL_CALL','BUY_STOCK','BUY_SHARES','SELL_SHARES','CLOSE']));
