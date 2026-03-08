@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import StatCard from '@/components/dashboard/StatCard';
 import PositionsTable from '@/components/dashboard/PositionsTable';
 import BotLogFeed from '@/components/dashboard/BotLogFeed';
+import SentimentPanel from '@/components/dashboard/SentimentPanel';
 import DemoTour from '@/components/DemoTour';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -183,6 +184,14 @@ export default function Dashboard() {
           icon={Activity}
         />
       </div>
+
+      {/* News Sentiment */}
+      {user && settings?.approved_stocks && (
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">News Sentiment</h2>
+          <SentimentPanel userId={user.id} approvedStocks={settings.approved_stocks} />
+        </div>
+      )}
 
       {/* Active positions */}
       <div>
