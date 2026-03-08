@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTradeNotifications } from '@/hooks/useTradeNotifications';
 import NotificationBell from '@/components/NotificationBell';
-import { Activity, LayoutDashboard, Settings, ScrollText, LogOut, FlaskConical } from 'lucide-react';
+import { Activity, LayoutDashboard, Settings, ScrollText, LogOut, FlaskConical, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
