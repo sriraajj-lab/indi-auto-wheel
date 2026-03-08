@@ -7,6 +7,11 @@ import BotLogFeed from '@/components/dashboard/BotLogFeed';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Wallet, TrendingUp, TrendingDown, ShieldAlert,
   Activity, StopCircle, Play, Clock
 } from 'lucide-react';
@@ -62,7 +67,18 @@ export default function Dashboard() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
       setSettings((s: any) => s ? { ...s, emergency_stop: true, bot_enabled: false } : s);
-      toast({ title: '🛑 Emergency Stop Activated', description: 'All positions will be squared off.' });
+      toast({ title: '🛑 Emergency Stop Activated', description: 'Bot halted. No new trades will be placed.' });
+    }
+  };
+
+  const handleResume = async () => {
+    if (!user) return;
+    const { error } = await supabase.from('bot_settings').update({ emergency_stop: false, bot_enabled: true }).eq('user_id', user.id);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      setSettings((s: any) => s ? { ...s, emergency_stop: false, bot_enabled: true } : s);
+      toast({ title: '▶️ Bot Resumed', description: 'Trading will resume at next cycle.' });
     }
   };
 
@@ -97,15 +113,37 @@ export default function Dashboard() {
             </span>
           </div>
         </div>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={handleEmergencyStop}
-          disabled={!botActive}
-        >
-          <StopCircle className="h-4 w-4 mr-1" />
-          Emergency Stop
-        </Button>
+        <div className="flex gap-2">
+          {settings?.emergency_stop ? (
+            <Button variant="profit" size="sm" onClick={handleResume}>
+              <Play className="h-4 w-4 mr-1" />
+              Resume Bot
+            </Button>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="danger" size="sm" disabled={!botActive}>
+                  <StopCircle className="h-4 w-4 mr-1" />
+                  Emergency Stop
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>🛑 Emergency Stop</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will immediately halt all bot trading activity. No new trades will be placed until you manually resume. Are you sure?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleEmergencyStop} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Stop All Trading
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
