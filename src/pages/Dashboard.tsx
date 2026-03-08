@@ -67,7 +67,18 @@ export default function Dashboard() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
       setSettings((s: any) => s ? { ...s, emergency_stop: true, bot_enabled: false } : s);
-      toast({ title: '🛑 Emergency Stop Activated', description: 'All positions will be squared off.' });
+      toast({ title: '🛑 Emergency Stop Activated', description: 'Bot halted. No new trades will be placed.' });
+    }
+  };
+
+  const handleResume = async () => {
+    if (!user) return;
+    const { error } = await supabase.from('bot_settings').update({ emergency_stop: false, bot_enabled: true }).eq('user_id', user.id);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      setSettings((s: any) => s ? { ...s, emergency_stop: false, bot_enabled: true } : s);
+      toast({ title: '▶️ Bot Resumed', description: 'Trading will resume at next cycle.' });
     }
   };
 
