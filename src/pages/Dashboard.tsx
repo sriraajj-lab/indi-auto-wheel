@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import StatCard from '@/components/dashboard/StatCard';
 import PositionsTable from '@/components/dashboard/PositionsTable';
 import BotLogFeed from '@/components/dashboard/BotLogFeed';
+import DemoTour from '@/components/DemoTour';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   Wallet, TrendingUp, TrendingDown, ShieldAlert,
-  Activity, StopCircle, Play, Clock
+  Activity, StopCircle, Play, Clock, HelpCircle
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [trades, setTrades] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [dailyPnl, setDailyPnl] = useState<any>(null);
+  const [showDemo, setShowDemo] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -114,6 +116,15 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDemo(true)}
+            className="gap-1 text-muted-foreground border-border hover:text-foreground"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Demo</span>
+          </Button>
           {settings?.emergency_stop ? (
             <Button variant="profit" size="sm" onClick={handleResume}>
               <Play className="h-4 w-4 mr-1" />
@@ -184,6 +195,8 @@ export default function Dashboard() {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Bot Activity</h2>
         <BotLogFeed logs={logs} />
       </div>
+
+      <DemoTour open={showDemo} onOpenChange={setShowDemo} />
     </div>
   );
 }
