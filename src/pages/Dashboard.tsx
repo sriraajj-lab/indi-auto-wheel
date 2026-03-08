@@ -185,6 +185,14 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* News Sentiment */}
+      {user && settings?.approved_stocks && (
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">News Sentiment</h2>
+          <SentimentPanel userId={user.id} approvedStocks={settings.approved_stocks} />
+        </div>
+      )}
+
       {/* Active positions */}
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Active Positions</h2>
