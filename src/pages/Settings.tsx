@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Key, Wallet, Shield, Zap, ListChecks } from 'lucide-react';
+import { Save, Key, Wallet, Shield, Zap, ListChecks, Link, Unlink, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const DEFAULT_STOCKS = ['RELIANCE', 'HDFCBANK', 'TCS', 'INFY', 'ICICIBANK', 'SBIN', 'ITC'];
@@ -20,7 +20,6 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState({
     broker_api_key: '',
     broker_api_secret: '',
-    broker_request_token: '',
     allocated_capital: 500000,
     max_daily_loss_pct: 1.5,
     max_risk_per_trade_pct: 1.0,
@@ -28,6 +27,11 @@ export default function SettingsPage() {
     aggressiveness: 'Balanced',
     bot_enabled: false,
   });
+  const [brokerStatus, setBrokerStatus] = useState<{
+    connected: boolean;
+    expiresAt: string | null;
+    expired: boolean;
+  }>({ connected: false, expiresAt: null, expired: false });
   const [newStock, setNewStock] = useState('');
 
   useEffect(() => {
@@ -37,7 +41,6 @@ export default function SettingsPage() {
         setSettings({
           broker_api_key: data.broker_api_key ?? '',
           broker_api_secret: data.broker_api_secret ?? '',
-          broker_request_token: data.broker_request_token ?? '',
           allocated_capital: data.allocated_capital,
           max_daily_loss_pct: data.max_daily_loss_pct,
           max_risk_per_trade_pct: data.max_risk_per_trade_pct,
@@ -45,6 +48,11 @@ export default function SettingsPage() {
           aggressiveness: data.aggressiveness,
           bot_enabled: data.bot_enabled,
         });
+
+        const hasToken = !!data.broker_access_token;
+        const expiresAt = data.broker_access_token_expires_at;
+        const expired = expiresAt ? new Date(expiresAt) < new Date() : false;
+        setBrokerStatus({ connected: hasToken && !expired, expiresAt, expired: hasToken && expired });
       }
       setLoading(false);
     });
@@ -58,7 +66,6 @@ export default function SettingsPage() {
       ...settings,
       broker_api_key: settings.broker_api_key || null,
       broker_api_secret: settings.broker_api_secret || null,
-      broker_request_token: settings.broker_request_token || null,
     };
 
     const { error } = await supabase.from('bot_settings').upsert(payload, { onConflict: 'user_id' });
@@ -68,6 +75,33 @@ export default function SettingsPage() {
       toast({ title: 'Settings saved ✓' });
     }
     setSaving(false);
+  };
+
+  const handleKiteConnect = () => {
+    if (!settings.broker_api_key) {
+      toast({ title: 'API Key required', description: 'Save your Kite API Key first.', variant: 'destructive' });
+      return;
+    }
+    // Redirect to Kite login — redirect_url points to our callback page
+    const redirectUrl = `${window.location.origin}/kite-callback`;
+    const kiteLoginUrl = `https://kite.zerodha.com/connect/login?v=3&api_key=${encodeURIComponent(settings.broker_api_key)}&redirect_url=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = kiteLoginUrl;
+  };
+
+  const handleKiteDisconnect = async () => {
+    if (!user) return;
+    const { error } = await supabase.from('bot_settings').update({
+      broker_access_token: null,
+      broker_access_token_expires_at: null,
+      broker_request_token: null,
+    }).eq('user_id', user.id);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      setBrokerStatus({ connected: false, expiresAt: null, expired: false });
+      toast({ title: 'Kite Disconnected' });
+    }
   };
 
   const addStock = () => {
@@ -82,18 +116,70 @@ export default function SettingsPage() {
     setSettings(prev => ({ ...prev, approved_stocks: prev.approved_stocks.filter(s => s !== stock) }));
   };
 
+  const formatExpiry = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+  };
+
   if (loading) return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading...</div>;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-slide-up">
       <h1 className="text-2xl font-bold font-mono">Settings</h1>
 
-      {/* Broker */}
+      {/* Broker Connection */}
       <Card className="p-5 bg-card border-border">
         <div className="flex items-center gap-2 mb-4">
           <Key className="h-4 w-4 text-profit" />
           <h2 className="font-semibold">Zerodha Kite Connect</h2>
         </div>
+
+        {/* Connection Status */}
+        <div className={`rounded-lg p-3 mb-4 border ${
+          brokerStatus.connected
+            ? 'bg-profit/5 border-profit/20'
+            : brokerStatus.expired
+              ? 'bg-yellow-500/5 border-yellow-500/20'
+              : 'bg-muted/50 border-border'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {brokerStatus.connected ? (
+                <CheckCircle2 className="h-4 w-4 text-profit" />
+              ) : brokerStatus.expired ? (
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              ) : (
+                <Unlink className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="text-sm font-mono">
+                {brokerStatus.connected
+                  ? 'Connected'
+                  : brokerStatus.expired
+                    ? 'Token Expired'
+                    : 'Not Connected'}
+              </span>
+            </div>
+            {brokerStatus.connected ? (
+              <Button variant="outline" size="sm" onClick={handleKiteDisconnect} className="text-xs">
+                <Unlink className="h-3 w-3 mr-1" />
+                Disconnect
+              </Button>
+            ) : (
+              <Button variant="profit" size="sm" onClick={handleKiteConnect} className="text-xs">
+                <Link className="h-3 w-3 mr-1" />
+                {brokerStatus.expired ? 'Reconnect' : 'Connect Kite'}
+              </Button>
+            )}
+          </div>
+          {brokerStatus.expiresAt && brokerStatus.connected && (
+            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>Expires: {formatExpiry(brokerStatus.expiresAt)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* API Credentials */}
         <div className="space-y-3">
           <div>
             <label className="text-xs text-muted-foreground">API Key</label>
@@ -114,20 +200,12 @@ export default function SettingsPage() {
               className="bg-muted border-border font-mono text-sm"
             />
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Request Token (from login redirect)</label>
-            <Input
-              value={settings.broker_request_token}
-              onChange={e => setSettings(s => ({ ...s, broker_request_token: e.target.value }))}
-              placeholder="Paste request token after Kite login"
-              className="bg-muted border-border font-mono text-sm"
-            />
-          </div>
           <p className="text-xs text-muted-foreground">
-            Get your API credentials from{' '}
-            <a href="https://kite.trade" target="_blank" rel="noopener noreferrer" className="text-profit hover:underline">
-              kite.trade
+            Get credentials from{' '}
+            <a href="https://developers.kite.trade" target="_blank" rel="noopener noreferrer" className="text-profit hover:underline">
+              developers.kite.trade
             </a>
+            . Save settings before connecting.
           </p>
         </div>
       </Card>
@@ -240,6 +318,12 @@ export default function SettingsPage() {
             onCheckedChange={v => setSettings(s => ({ ...s, bot_enabled: v }))}
           />
         </div>
+        {settings.bot_enabled && !brokerStatus.connected && (
+          <p className="text-xs text-yellow-500 mt-2 flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            Kite not connected — bot will skip trading until connected.
+          </p>
+        )}
       </Card>
 
       <Button onClick={handleSave} disabled={saving} variant="profit" className="w-full">
