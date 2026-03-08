@@ -328,7 +328,6 @@ async function executeKiteOrder(
     default:
       return { success: false, orderId: null, error: `Unknown action: ${decision.action}` };
   }
-  }
 }
 
 // ── AI Decision Engine ───────────────────────────────────────────────
