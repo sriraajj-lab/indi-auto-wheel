@@ -912,6 +912,7 @@ serve(async (req) => {
           rsi_value: analysis.rsi,
           ema_cloud_status: analysis.emaCloud,
           ai_reasoning: decision.reasoning,
+          news_sentiment: sentiment ? `${sentiment.sentiment} (${sentiment.score.toFixed(2)})` : null,
           broker_order_id: orderResult?.orderId || null,
           status: "OPEN",
         });
