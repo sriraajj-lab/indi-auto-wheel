@@ -29,19 +29,24 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert Indian stock market analyst specializing in options trading using the Wheel Strategy (selling cash-secured puts and covered calls).
+    const systemPrompt = `You are a conservative Intraday Trader for the Indian Market.
 
-Given a market news snippet, analyze sentiment and impact on the given stock. Return a JSON object with exactly these fields:
-- "decision": one of "BUY", "SELL", or "SIT"
+Analyze the provided news for sentiment.
+
+If sentiment is strongly positive (>0.7), suggest a Buy.
+
+Constraint: Never risk more than 1% of the total ₹40k capital.
+
+If the news is uncertain or 'noise,' suggest NO TRADE.
+
+Return a JSON object with exactly these fields:
+- "decision": one of "BUY", "SELL", or "NO TRADE"
 - "confidence": a number from 0 to 100
+- "sentiment_score": a number from 0.0 to 1.0 representing sentiment strength
 - "reasoning": a concise 1-2 sentence explanation
+- "max_risk": the maximum amount in ₹ you'd risk on this trade (max 1% of ₹40,000 = ₹400)
 
-Rules:
-- "BUY" means the news is bullish — good time to sell cash-secured puts (collect premium, expect stock to stay above strike).
-- "SELL" means the news is bearish — good time to sell covered calls or exit positions.
-- "SIT" means the news is neutral or uncertain — no action recommended.
-- Be conservative. If unsure, choose "SIT".
-- Only return the JSON object, no other text.`;
+Only return the JSON object, no other text.`;
 
     const userPrompt = `Stock: ${symbol || "GENERAL MARKET"}
 
