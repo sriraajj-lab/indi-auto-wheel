@@ -20,11 +20,13 @@ serve(async (req) => {
       );
     }
 
-    const { news, symbol } = await req.json();
+    const body = await req.json();
+    const news = typeof body.news === "string" ? body.news.trim() : "";
+    const symbol = typeof body.symbol === "string" ? body.symbol.trim().toUpperCase() : "";
 
-    if (!news || typeof news !== "string") {
+    if (!news || news.length < 10 || news.length > 5000) {
       return new Response(
-        JSON.stringify({ error: "Missing or invalid 'news' field" }),
+        JSON.stringify({ error: "News must be between 10 and 5000 characters" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -39,18 +41,19 @@ Constraint: Never risk more than 1% of the total ₹40k capital.
 
 If the news is uncertain or 'noise,' suggest NO TRADE.
 
+Additionally, if the news has strong long-term implications (positive or negative), include a separate long-term suggestion. This is advisory only — the user may choose to act on it outside intraday hours.
+
 Return a JSON object with exactly these fields:
-- "decision": one of "BUY", "SELL", or "NO TRADE"
+- "decision": one of "BUY", "SELL", or "NO TRADE" (intraday decision)
 - "confidence": a number from 0 to 100
 - "sentiment_score": a number from 0.0 to 1.0 representing sentiment strength
-- "reasoning": a concise 1-2 sentence explanation
+- "reasoning": a concise 1-2 sentence explanation for the intraday decision
 - "max_risk": the maximum amount in ₹ you'd risk on this trade (max 1% of ₹40,000 = ₹400)
+- "long_term": an object with { "suggestion": "BUY" | "SELL" | "HOLD" | "NONE", "horizon": "1-3 months" | "3-6 months" | "6-12 months" | "N/A", "reasoning": "1 sentence" } — set suggestion to "NONE" if no long-term view.
 
 Only return the JSON object, no other text.`;
 
-    const userPrompt = `Stock: ${symbol || "GENERAL MARKET"}
-
-News: ${news}`;
+    const userPrompt = `Stock: ${symbol || "GENERAL MARKET"}\n\nNews: ${news}`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -61,7 +64,7 @@ News: ${news}`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 300,
+        max_tokens: 500,
         messages: [
           { role: "user", content: `${systemPrompt}\n\n${userPrompt}` },
         ],
@@ -80,18 +83,19 @@ News: ${news}`;
     const data = await response.json();
     const content = data.content?.[0]?.text || "";
 
-    // Parse the JSON from Claude's response
     let tradeDecision;
     try {
-      // Extract JSON from response (handle potential markdown wrapping)
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found in response");
       tradeDecision = JSON.parse(jsonMatch[0]);
     } catch {
       tradeDecision = {
-        decision: "SIT",
+        decision: "NO TRADE",
         confidence: 0,
-        reasoning: "Could not parse AI response. Raw: " + content.slice(0, 200),
+        sentiment_score: 0,
+        reasoning: "Could not parse AI response.",
+        max_risk: 0,
+        long_term: { suggestion: "NONE", horizon: "N/A", reasoning: "Parse error" },
       };
     }
 
@@ -99,9 +103,12 @@ News: ${news}`;
       JSON.stringify({
         decision: tradeDecision.decision,
         confidence: tradeDecision.confidence,
+        sentiment_score: tradeDecision.sentiment_score,
         reasoning: tradeDecision.reasoning,
+        max_risk: tradeDecision.max_risk,
+        long_term: tradeDecision.long_term,
         symbol: symbol || "GENERAL",
-        model: "claude-3-5-sonnet",
+        model: "claude-sonnet-4",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

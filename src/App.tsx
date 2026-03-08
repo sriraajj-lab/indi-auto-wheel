@@ -9,6 +9,7 @@ import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import SettingsPage from "@/pages/Settings";
 import BacktestPage from "@/pages/Backtest";
+import NewsAnalysisPage from "@/pages/NewsAnalysis";
 import TradeLog from "@/pages/TradeLog";
 import KiteCallback from "@/pages/KiteCallback";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/trades" element={<ProtectedRoute><TradeLog /></ProtectedRoute>} />
             <Route path="/backtest" element={<ProtectedRoute><BacktestPage /></ProtectedRoute>} />
+            <Route path="/news" element={<ProtectedRoute><NewsAnalysisPage /></ProtectedRoute>} />
             <Route path="/kite-callback" element={<ProtectedRoute><KiteCallback /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
