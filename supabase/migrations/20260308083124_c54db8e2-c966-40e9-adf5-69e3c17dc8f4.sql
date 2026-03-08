@@ -1,0 +1,2 @@
+ALTER TABLE public.bot_logs DROP CONSTRAINT bot_logs_log_type_check;
+ALTER TABLE public.bot_logs ADD CONSTRAINT bot_logs_log_type_check CHECK (log_type = ANY (ARRAY['INFO'::text, 'TRADE'::text, 'WARNING'::text, 'ERROR'::text, 'AI_DECISION'::text, 'TRADE_EXECUTED'::text, 'STOP_LOSS'::text, 'EXPIRY_CLOSE'::text, 'ORDER_FAILED'::text, 'RISK_HALT'::text, 'SKIPPED'::text, 'SENTIMENT'::text, 'SENTIMENT_BLOCK'::text]));

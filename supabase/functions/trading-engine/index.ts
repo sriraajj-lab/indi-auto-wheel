@@ -383,10 +383,19 @@ Return ONLY valid JSON — an object where each key is the stock symbol and the 
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return {};
+    console.log("Sentiment raw response:", content.substring(0, 500));
+    
+    // Extract JSON - handle markdown code blocks
+    const cleaned = content.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn("No JSON found in sentiment response");
+      return {};
+    }
 
-    return JSON.parse(jsonMatch[0]);
+    const result = JSON.parse(jsonMatch[0]);
+    console.log("Parsed sentiment for:", Object.keys(result).join(", "));
+    return result;
   } catch (err) {
     console.error("News sentiment error:", err);
     return {};
@@ -826,12 +835,14 @@ serve(async (req) => {
         .map((a) => `${a.symbol}: ${a.newsSentiment!.sentiment} (${a.newsSentiment!.score})`)
         .join(", ");
       if (sentimentSummary) {
-        await supabase.from("bot_logs").insert({
+        const { error: sentLogErr } = await supabase.from("bot_logs").insert({
           user_id: userId,
           log_type: "SENTIMENT",
           message: `News sentiment: ${sentimentSummary}`,
-          metadata: sentimentMap,
+          metadata: sentimentMap as any,
         });
+        if (sentLogErr) console.error("Sentiment log insert error:", sentLogErr);
+        else console.log("Sentiment log inserted successfully");
       }
 
       // Get AI decisions (now includes sentiment data)
