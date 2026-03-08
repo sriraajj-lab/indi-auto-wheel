@@ -330,6 +330,69 @@ async function executeKiteOrder(
   }
 }
 
+// ── News Sentiment Analysis ──────────────────────────────────────────
+
+interface NewsSentiment {
+  sentiment: "BULLISH" | "BEARISH" | "NEUTRAL";
+  score: number; // 0.0 to 1.0
+  summary: string;
+}
+
+/** Fetch AI-powered news sentiment for a batch of stocks */
+async function getNewsSentiment(
+  symbols: string[],
+): Promise<Record<string, NewsSentiment>> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.warn("LOVABLE_API_KEY not configured — skipping news sentiment");
+    return {};
+  }
+
+  const prompt = `You are a market sentiment analyst for the Indian stock market (NSE).
+
+For each of the following stocks, assess the CURRENT general market sentiment based on your knowledge of recent events, sector trends, and macroeconomic factors.
+
+Stocks: ${symbols.join(", ")}
+
+Return ONLY valid JSON — an object where each key is the stock symbol and the value is:
+{
+  "sentiment": "BULLISH" | "BEARISH" | "NEUTRAL",
+  "score": <number 0.0 to 1.0 where 0=very bearish, 0.5=neutral, 1.0=very bullish>,
+  "summary": "<1 sentence explanation>"
+}`;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Sentiment API error:", response.status, errText);
+      return {};
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return {};
+
+    return JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    console.error("News sentiment error:", err);
+    return {};
+  }
+}
+
 // ── AI Decision Engine ───────────────────────────────────────────────
 
 interface StockAnalysis {
@@ -339,6 +402,7 @@ interface StockAnalysis {
   emaCloud: string;
   shortEma: number;
   longEma: number;
+  newsSentiment?: NewsSentiment;
 }
 
 interface AIDecision {
@@ -367,6 +431,14 @@ WHEEL STRATEGY RULES:
 4. HOLD: When signals are mixed or RSI is in no-man's land (45-55).
 5. CLOSE: Exit a position if stop-loss is hit or conditions drastically change.
 
+NEWS SENTIMENT INTEGRATION (CRITICAL):
+- News sentiment is provided for each stock. It MUST factor into your decision.
+- If news sentiment is BEARISH (score < 0.3): DO NOT enter new bullish positions (no SELL_PUT, no BUY_STOCK). Prefer HOLD or CLOSE existing positions.
+- If news sentiment is NEUTRAL (score 0.3-0.7): Proceed with technical signals but reduce confidence by 10-20%.
+- If news sentiment is BULLISH (score > 0.7): Proceed normally, this confirms technical signals.
+- Never risk more than 1% of allocated capital per trade.
+- If the news is uncertain or 'noise,' default to NO TRADE / HOLD.
+
 RISK PARAMETERS:
 - Allocated Capital: ₹${settings.allocated_capital}
 - Max Daily Loss: ${settings.max_daily_loss_pct}%
@@ -381,9 +453,14 @@ Respond ONLY with valid JSON. Return an array of trade decisions.`;
 
   const userPrompt = `Market analysis at ${new Date().toISOString()}:
 
-${analyses.map((a) => `${a.symbol}: Price ₹${a.currentPrice}, RSI ${a.rsi.toFixed(1)}, EMA Cloud ${a.emaCloud} (Short EMA ${a.shortEma}, Long EMA ${a.longEma})`).join("\n")}
+${analyses.map((a) => {
+    const sentimentLine = a.newsSentiment
+      ? `News Sentiment: ${a.newsSentiment.sentiment} (score: ${a.newsSentiment.score}) — ${a.newsSentiment.summary}`
+      : `News Sentiment: UNAVAILABLE`;
+    return `${a.symbol}: Price ₹${a.currentPrice}, RSI ${a.rsi.toFixed(1)}, EMA Cloud ${a.emaCloud} (Short EMA ${a.shortEma}, Long EMA ${a.longEma})\n  ${sentimentLine}`;
+  }).join("\n\n")}
 
-Based on the wheel strategy rules and risk parameters, what trades should I make? Consider existing positions.`;
+Based on the wheel strategy rules, risk parameters, AND news sentiment, what trades should I make? Consider existing positions. Factor news sentiment heavily into your confidence scores.`;
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -737,7 +814,27 @@ serve(async (req) => {
         continue;
       }
 
-      // Get AI decisions
+      // Fetch news sentiment for all analyzed stocks
+      const sentimentMap = await getNewsSentiment(analyses.map((a) => a.symbol));
+      for (const analysis of analyses) {
+        analysis.newsSentiment = sentimentMap[analysis.symbol] || undefined;
+      }
+
+      // Log sentiment results
+      const sentimentSummary = analyses
+        .filter((a) => a.newsSentiment)
+        .map((a) => `${a.symbol}: ${a.newsSentiment!.sentiment} (${a.newsSentiment!.score})`)
+        .join(", ");
+      if (sentimentSummary) {
+        await supabase.from("bot_logs").insert({
+          user_id: userId,
+          log_type: "SENTIMENT",
+          message: `News sentiment: ${sentimentSummary}`,
+          metadata: sentimentMap,
+        });
+      }
+
+      // Get AI decisions (now includes sentiment data)
       let decisions: AIDecision[];
       try {
         decisions = await getAIDecision(analyses, settings, openTrades || []);
@@ -764,6 +861,19 @@ serve(async (req) => {
 
         const analysis = analyses.find((a) => a.symbol === decision.symbol);
         if (!analysis) continue;
+
+        // Sentiment gate: block bullish entries when news is bearish
+        const sentiment = analysis.newsSentiment;
+        const isBullishEntry = ["SELL_PUT", "BUY_STOCK"].includes(decision.action);
+        if (sentiment && sentiment.score < 0.3 && isBullishEntry) {
+          await supabase.from("bot_logs").insert({
+            user_id: userId,
+            log_type: "SENTIMENT_BLOCK",
+            message: `${decision.action} ${decision.symbol} BLOCKED — bearish news sentiment (${sentiment.score.toFixed(2)}): ${sentiment.summary}`,
+            metadata: { decision, sentiment },
+          });
+          continue;
+        }
 
         // Only execute high-confidence trades
         if (decision.confidence < 0.6) {
@@ -802,6 +912,7 @@ serve(async (req) => {
           rsi_value: analysis.rsi,
           ema_cloud_status: analysis.emaCloud,
           ai_reasoning: decision.reasoning,
+          news_sentiment: sentiment ? `${sentiment.sentiment} (${sentiment.score.toFixed(2)})` : null,
           broker_order_id: orderResult?.orderId || null,
           status: "OPEN",
         });
