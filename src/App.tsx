@@ -40,6 +40,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/trades" element={<ProtectedRoute><TradeLog /></ProtectedRoute>} />
+            <Route path="/kite-callback" element={<ProtectedRoute><KiteCallback /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
