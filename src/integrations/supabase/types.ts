@@ -14,7 +14,195 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bot_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_type: string
+          message: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_type: string
+          message: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_type?: string
+          message?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bot_settings: {
+        Row: {
+          aggressiveness: string
+          allocated_capital: number
+          approved_stocks: string[]
+          bot_enabled: boolean
+          broker_access_token: string | null
+          broker_access_token_expires_at: string | null
+          broker_api_key: string | null
+          broker_api_secret: string | null
+          broker_request_token: string | null
+          created_at: string
+          emergency_stop: boolean
+          id: string
+          max_daily_loss_pct: number
+          max_risk_per_trade_pct: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aggressiveness?: string
+          allocated_capital?: number
+          approved_stocks?: string[]
+          bot_enabled?: boolean
+          broker_access_token?: string | null
+          broker_access_token_expires_at?: string | null
+          broker_api_key?: string | null
+          broker_api_secret?: string | null
+          broker_request_token?: string | null
+          created_at?: string
+          emergency_stop?: boolean
+          id?: string
+          max_daily_loss_pct?: number
+          max_risk_per_trade_pct?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aggressiveness?: string
+          allocated_capital?: number
+          approved_stocks?: string[]
+          bot_enabled?: boolean
+          broker_access_token?: string | null
+          broker_access_token_expires_at?: string | null
+          broker_api_key?: string | null
+          broker_api_secret?: string | null
+          broker_request_token?: string | null
+          created_at?: string
+          emergency_stop?: boolean
+          id?: string
+          max_daily_loss_pct?: number
+          max_risk_per_trade_pct?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_pnl: {
+        Row: {
+          capital_used: number
+          created_at: string
+          date: string
+          id: string
+          max_loss_remaining: number
+          realized_pnl: number
+          total_pnl: number
+          trades_count: number
+          unrealized_pnl: number
+          user_id: string
+        }
+        Insert: {
+          capital_used?: number
+          created_at?: string
+          date: string
+          id?: string
+          max_loss_remaining?: number
+          realized_pnl?: number
+          total_pnl?: number
+          trades_count?: number
+          unrealized_pnl?: number
+          user_id: string
+        }
+        Update: {
+          capital_used?: number
+          created_at?: string
+          date?: string
+          id?: string
+          max_loss_remaining?: number
+          realized_pnl?: number
+          total_pnl?: number
+          trades_count?: number
+          unrealized_pnl?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trades: {
+        Row: {
+          ai_reasoning: string | null
+          broker_order_id: string | null
+          created_at: string
+          ema_cloud_status: string | null
+          entry_price: number
+          exit_price: number | null
+          expiry_date: string | null
+          id: string
+          news_sentiment: string | null
+          pnl: number | null
+          premium: number | null
+          quantity: number
+          rsi_value: number | null
+          status: string
+          strike_price: number | null
+          symbol: string
+          trade_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          broker_order_id?: string | null
+          created_at?: string
+          ema_cloud_status?: string | null
+          entry_price: number
+          exit_price?: number | null
+          expiry_date?: string | null
+          id?: string
+          news_sentiment?: string | null
+          pnl?: number | null
+          premium?: number | null
+          quantity?: number
+          rsi_value?: number | null
+          status?: string
+          strike_price?: number | null
+          symbol: string
+          trade_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_reasoning?: string | null
+          broker_order_id?: string | null
+          created_at?: string
+          ema_cloud_status?: string | null
+          entry_price?: number
+          exit_price?: number | null
+          expiry_date?: string | null
+          id?: string
+          news_sentiment?: string | null
+          pnl?: number | null
+          premium?: number | null
+          quantity?: number
+          rsi_value?: number | null
+          status?: string
+          strike_price?: number | null
+          symbol?: string
+          trade_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
