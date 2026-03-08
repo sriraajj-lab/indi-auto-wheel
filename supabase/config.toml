@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.backtest]
 verify_jwt = false
+
+[functions.ai-trade-decision]
+verify_jwt = false
