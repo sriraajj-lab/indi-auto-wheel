@@ -43,6 +43,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/trades" element={<ProtectedRoute><TradeLog /></ProtectedRoute>} />
             <Route path="/backtest" element={<ProtectedRoute><BacktestPage /></ProtectedRoute>} />
+            <Route path="/news" element={<ProtectedRoute><NewsAnalysisPage /></ProtectedRoute>} />
             <Route path="/kite-callback" element={<ProtectedRoute><KiteCallback /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

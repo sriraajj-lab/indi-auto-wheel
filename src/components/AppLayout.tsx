@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/trades', icon: ScrollText, label: 'Trade Log' },
+  { path: '/news', icon: Brain, label: 'News AI' },
   { path: '/backtest', icon: FlaskConical, label: 'Backtest' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
