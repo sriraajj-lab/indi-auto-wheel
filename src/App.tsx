@@ -8,6 +8,7 @@ import AppLayout from "@/components/AppLayout";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import SettingsPage from "@/pages/Settings";
+import BacktestPage from "@/pages/Backtest";
 import TradeLog from "@/pages/TradeLog";
 import KiteCallback from "@/pages/KiteCallback";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/trades" element={<ProtectedRoute><TradeLog /></ProtectedRoute>} />
+            <Route path="/backtest" element={<ProtectedRoute><BacktestPage /></ProtectedRoute>} />
             <Route path="/kite-callback" element={<ProtectedRoute><KiteCallback /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
