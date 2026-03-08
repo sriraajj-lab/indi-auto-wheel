@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import StatCard from '@/components/dashboard/StatCard';
 import PositionsTable from '@/components/dashboard/PositionsTable';
 import BotLogFeed from '@/components/dashboard/BotLogFeed';
+import DemoTour from '@/components/DemoTour';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   Wallet, TrendingUp, TrendingDown, ShieldAlert,
-  Activity, StopCircle, Play, Clock
+  Activity, StopCircle, Play, Clock, HelpCircle
 } from 'lucide-react';
 
 export default function Dashboard() {
