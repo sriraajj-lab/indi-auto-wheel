@@ -9,6 +9,7 @@ import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import SettingsPage from "@/pages/Settings";
 import TradeLog from "@/pages/TradeLog";
+import KiteCallback from "@/pages/KiteCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/trades" element={<ProtectedRoute><TradeLog /></ProtectedRoute>} />
+            <Route path="/kite-callback" element={<ProtectedRoute><KiteCallback /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
