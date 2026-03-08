@@ -835,12 +835,14 @@ serve(async (req) => {
         .map((a) => `${a.symbol}: ${a.newsSentiment!.sentiment} (${a.newsSentiment!.score})`)
         .join(", ");
       if (sentimentSummary) {
-        await supabase.from("bot_logs").insert({
+        const { error: sentLogErr } = await supabase.from("bot_logs").insert({
           user_id: userId,
           log_type: "SENTIMENT",
           message: `News sentiment: ${sentimentSummary}`,
-          metadata: sentimentMap,
+          metadata: sentimentMap as any,
         });
+        if (sentLogErr) console.error("Sentiment log insert error:", sentLogErr);
+        else console.log("Sentiment log inserted successfully");
       }
 
       // Get AI decisions (now includes sentiment data)
