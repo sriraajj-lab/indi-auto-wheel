@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [trades, setTrades] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [dailyPnl, setDailyPnl] = useState<any>(null);
+  const [showDemo, setShowDemo] = useState(false);
 
   useEffect(() => {
     if (!user) return;
