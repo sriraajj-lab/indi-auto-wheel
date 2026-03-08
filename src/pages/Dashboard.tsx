@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import StatCard from '@/components/dashboard/StatCard';
 import PositionsTable from '@/components/dashboard/PositionsTable';
 import BotLogFeed from '@/components/dashboard/BotLogFeed';
+import SentimentPanel from '@/components/dashboard/SentimentPanel';
 import DemoTour from '@/components/DemoTour';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
