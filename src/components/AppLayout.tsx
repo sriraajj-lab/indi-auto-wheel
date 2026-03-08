@@ -48,10 +48,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               ))}
             </nav>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
-            <LogOut className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onOpen={markAllRead}
+              onClear={clearAll}
+            />
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </div>
         </div>
       </header>
 
