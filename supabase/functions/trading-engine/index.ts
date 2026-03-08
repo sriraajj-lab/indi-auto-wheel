@@ -814,7 +814,27 @@ serve(async (req) => {
         continue;
       }
 
-      // Get AI decisions
+      // Fetch news sentiment for all analyzed stocks
+      const sentimentMap = await getNewsSentiment(analyses.map((a) => a.symbol));
+      for (const analysis of analyses) {
+        analysis.newsSentiment = sentimentMap[analysis.symbol] || undefined;
+      }
+
+      // Log sentiment results
+      const sentimentSummary = analyses
+        .filter((a) => a.newsSentiment)
+        .map((a) => `${a.symbol}: ${a.newsSentiment!.sentiment} (${a.newsSentiment!.score})`)
+        .join(", ");
+      if (sentimentSummary) {
+        await supabase.from("bot_logs").insert({
+          user_id: userId,
+          log_type: "SENTIMENT",
+          message: `News sentiment: ${sentimentSummary}`,
+          metadata: sentimentMap,
+        });
+      }
+
+      // Get AI decisions (now includes sentiment data)
       let decisions: AIDecision[];
       try {
         decisions = await getAIDecision(analyses, settings, openTrades || []);
