@@ -1,1 +1,4 @@
 project_id = "nmyxciorspyotlzttywf"
+
+[functions.trading-engine]
+verify_jwt = false
