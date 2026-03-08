@@ -9,6 +9,7 @@ import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import SettingsPage from "@/pages/Settings";
 import BacktestPage from "@/pages/Backtest";
+import NewsAnalysisPage from "@/pages/NewsAnalysis";
 import TradeLog from "@/pages/TradeLog";
 import KiteCallback from "@/pages/KiteCallback";
 import NotFound from "./pages/NotFound";
