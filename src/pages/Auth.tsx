@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Activity, TrendingUp, Shield } from 'lucide-react';
+import { lovable } from '@/integrations/lovable/index';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
