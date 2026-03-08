@@ -3,13 +3,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTradeNotifications } from '@/hooks/useTradeNotifications';
 import NotificationBell from '@/components/NotificationBell';
-import { Activity, LayoutDashboard, Settings, ScrollText, LogOut } from 'lucide-react';
+import { Activity, LayoutDashboard, Settings, ScrollText, LogOut, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/trades', icon: ScrollText, label: 'Trade Log' },
+  { path: '/backtest', icon: FlaskConical, label: 'Backtest' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
