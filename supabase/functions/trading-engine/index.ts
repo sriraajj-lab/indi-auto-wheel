@@ -573,6 +573,133 @@ serve(async (req) => {
         .eq("user_id", userId)
         .eq("status", "OPEN");
 
+      // ── Position Monitoring: stop-loss & expiry checks ──
+      const closedPositions: string[] = [];
+      if (openTrades && openTrades.length > 0) {
+        for (const trade of openTrades) {
+          // Get current price for the position's underlying
+          let currentPrice: number | null = null;
+          if (useSimulated) {
+            // Simulate a price near entry with some drift
+            const drift = (Math.random() - 0.48) * 0.06; // slight downward bias for testing
+            currentPrice = trade.entry_price * (1 + drift);
+          } else {
+            currentPrice = await fetchKiteLTP(trade.symbol, accessToken!, apiKey!);
+          }
+
+          if (!currentPrice) continue;
+
+          // 1. Stop-loss check: close if unrealized loss exceeds max_risk_per_trade_pct
+          const maxTradeRisk = (settings.allocated_capital * settings.max_risk_per_trade_pct) / 100;
+          let unrealizedPnl = 0;
+
+          if (trade.trade_type === "SELL_PUT") {
+            // Short put loses when stock drops below strike
+            const strike = trade.strike_price || trade.entry_price;
+            if (currentPrice < strike) {
+              unrealizedPnl = (currentPrice - strike) * trade.quantity;
+            }
+          } else if (trade.trade_type === "SELL_CALL") {
+            // Short call loses when stock rises above strike
+            const strike = trade.strike_price || trade.entry_price;
+            if (currentPrice > strike) {
+              unrealizedPnl = (strike - currentPrice) * trade.quantity;
+            }
+          } else if (trade.trade_type === "BUY_STOCK") {
+            unrealizedPnl = (currentPrice - trade.entry_price) * trade.quantity;
+          }
+
+          const shouldStopLoss = unrealizedPnl < -maxTradeRisk;
+
+          // 2. Expiry check: close if option expires today or has expired
+          const todayStr = new Date().toISOString().split("T")[0];
+          const isExpired = trade.expiry_date && trade.expiry_date <= todayStr;
+          const isOptionTrade = trade.trade_type === "SELL_PUT" || trade.trade_type === "SELL_CALL";
+
+          if (shouldStopLoss || (isExpired && isOptionTrade)) {
+            const closeReason = shouldStopLoss
+              ? `Stop-loss hit: unrealized P&L ₹${unrealizedPnl.toFixed(0)} exceeds max risk ₹${maxTradeRisk.toFixed(0)}`
+              : `Option expired (${trade.expiry_date})`;
+
+            // Place close order via Kite if live
+            let closeOrderResult: KiteOrderResult | null = null;
+            const isPaperClose = useSimulated || !accessToken || !apiKey;
+
+            if (!isPaperClose && isOptionTrade) {
+              const optionType = trade.trade_type === "SELL_PUT" ? "PE" : "CE";
+              const tradingsymbol = buildOptionSymbol(trade.symbol, trade.strike_price || currentPrice, optionType);
+              closeOrderResult = await placeKiteOrder({
+                tradingsymbol,
+                exchange: "NFO",
+                transaction_type: "BUY", // buy back short option
+                order_type: "MARKET",
+                product: "NRML",
+                quantity: trade.quantity,
+                tag: "IAW_SL",
+              }, accessToken!, apiKey!);
+            } else if (!isPaperClose && trade.trade_type === "BUY_STOCK") {
+              closeOrderResult = await placeKiteOrder({
+                tradingsymbol: trade.symbol,
+                exchange: "NSE",
+                transaction_type: "SELL",
+                order_type: "MARKET",
+                product: "CNC",
+                quantity: trade.quantity,
+                tag: "IAW_SL",
+              }, accessToken!, apiKey!);
+            }
+
+            // Update trade as closed
+            const { error: closeErr } = await supabase.from("trades").update({
+              status: "CLOSED",
+              exit_price: currentPrice,
+              pnl: unrealizedPnl,
+            }).eq("id", trade.id);
+
+            if (!closeErr) {
+              closedPositions.push(trade.symbol);
+              const mode = isPaperClose ? "📝 PAPER" : "🔴 LIVE";
+              await supabase.from("bot_logs").insert({
+                user_id: userId,
+                log_type: shouldStopLoss ? "STOP_LOSS" : "EXPIRY_CLOSE",
+                message: `${mode} CLOSED ${trade.trade_type} ${trade.symbol} @ ₹${currentPrice.toFixed(2)} | P&L: ₹${unrealizedPnl.toFixed(0)} | ${closeReason}${closeOrderResult?.orderId ? ` | Order: ${closeOrderResult.orderId}` : ""}`,
+                metadata: { trade, currentPrice, unrealizedPnl, closeReason, closeOrderResult },
+              });
+
+              // Update daily P&L
+              const { data: existingPnl } = await supabase
+                .from("daily_pnl")
+                .select("*")
+                .eq("user_id", userId)
+                .eq("date", today)
+                .maybeSingle();
+
+              if (existingPnl) {
+                await supabase.from("daily_pnl").update({
+                  realized_pnl: existingPnl.realized_pnl + unrealizedPnl,
+                  total_pnl: existingPnl.total_pnl + unrealizedPnl,
+                  trades_count: existingPnl.trades_count + 1,
+                }).eq("id", existingPnl.id);
+              } else {
+                await supabase.from("daily_pnl").insert({
+                  user_id: userId,
+                  date: today,
+                  realized_pnl: unrealizedPnl,
+                  total_pnl: unrealizedPnl,
+                  trades_count: 1,
+                  max_loss_remaining: maxDailyLoss + unrealizedPnl,
+                  capital_used: settings.allocated_capital,
+                });
+              }
+            }
+          }
+        }
+
+        if (closedPositions.length > 0) {
+          console.log(`Closed ${closedPositions.length} positions: ${closedPositions.join(", ")}`);
+        }
+      }
+
       // Analyze each approved stock
       const analyses: StockAnalysis[] = [];
       for (const symbol of settings.approved_stocks) {
