@@ -170,6 +170,167 @@ async function fetchKiteLTP(
   }
 }
 
+// ── Kite Order Placement ─────────────────────────────────────────────
+
+interface KiteOrderParams {
+  tradingsymbol: string;
+  exchange: string;
+  transaction_type: "BUY" | "SELL";
+  order_type: "MARKET" | "LIMIT";
+  product: "MIS" | "CNC" | "NRML";
+  quantity: number;
+  price?: number;
+  trigger_price?: number;
+  validity?: "DAY" | "IOC";
+  tag?: string;
+}
+
+interface KiteOrderResult {
+  success: boolean;
+  orderId: string | null;
+  error: string | null;
+}
+
+/** Place an order on Kite Connect */
+async function placeKiteOrder(
+  params: KiteOrderParams,
+  accessToken: string,
+  apiKey: string,
+): Promise<KiteOrderResult> {
+  try {
+    const body = new URLSearchParams();
+    body.append("tradingsymbol", params.tradingsymbol);
+    body.append("exchange", params.exchange);
+    body.append("transaction_type", params.transaction_type);
+    body.append("order_type", params.order_type);
+    body.append("product", params.product);
+    body.append("quantity", String(params.quantity));
+    if (params.price) body.append("price", String(params.price));
+    if (params.trigger_price) body.append("trigger_price", String(params.trigger_price));
+    body.append("validity", params.validity || "DAY");
+    if (params.tag) body.append("tag", params.tag);
+
+    const resp = await fetch("https://api.kite.trade/orders/regular", {
+      method: "POST",
+      headers: {
+        Authorization: `token ${apiKey}:${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    });
+
+    const data = await resp.json();
+    if (resp.ok && data?.data?.order_id) {
+      return { success: true, orderId: data.data.order_id, error: null };
+    }
+    return { success: false, orderId: null, error: data?.message || `HTTP ${resp.status}` };
+  } catch (err) {
+    return { success: false, orderId: null, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Build Kite trading symbol for options (e.g., RELIANCE2560320PE) */
+function buildOptionSymbol(symbol: string, strikePrice: number, optionType: "PE" | "CE"): string {
+  const now = new Date();
+  // Find nearest Thursday (weekly expiry)
+  const dayOfWeek = now.getDay();
+  const daysUntilThursday = (4 - dayOfWeek + 7) % 7 || 7;
+  const expiry = new Date(now.getTime() + daysUntilThursday * 24 * 60 * 60 * 1000);
+  const yy = String(expiry.getFullYear()).slice(-2);
+  const mmm = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][expiry.getMonth()];
+  const dd = String(expiry.getDate()).padStart(2, "0");
+  const roundedStrike = Math.round(strikePrice);
+  return `${symbol}${yy}${mmm}${dd}${roundedStrike}${optionType}`;
+}
+
+/** Standard NSE lot sizes for common stocks */
+const NSE_LOT_SIZES: Record<string, number> = {
+  RELIANCE: 250, HDFCBANK: 550, TCS: 175, INFY: 400,
+  ICICIBANK: 700, SBIN: 1500, ITC: 1600, BAJFINANCE: 125,
+  TATAMOTORS: 1400, AXISBANK: 900, KOTAKBANK: 400,
+  WIPRO: 1500, MARUTI: 100, HCLTECH: 350, LT: 300,
+};
+
+function getLotSize(symbol: string): number {
+  return NSE_LOT_SIZES[symbol] || 1;
+}
+
+/** Execute a trade decision via Kite Connect */
+async function executeKiteOrder(
+  decision: AIDecision,
+  analysis: StockAnalysis,
+  accessToken: string,
+  apiKey: string,
+  settings: any,
+): Promise<KiteOrderResult> {
+  const lotSize = getLotSize(decision.symbol);
+  const quantity = decision.quantity || lotSize;
+
+  // Capital check
+  const maxRiskAmount = (settings.allocated_capital * settings.max_risk_per_trade_pct) / 100;
+
+  switch (decision.action) {
+    case "SELL_PUT": {
+      const strike = decision.strikePrice || Math.round(analysis.currentPrice * 0.97);
+      const tradingsymbol = buildOptionSymbol(decision.symbol, strike, "PE");
+      return placeKiteOrder({
+        tradingsymbol,
+        exchange: "NFO",
+        transaction_type: "SELL",
+        order_type: "MARKET",
+        product: "NRML",
+        quantity,
+        tag: "IAW_SP",
+      }, accessToken, apiKey);
+    }
+    case "SELL_CALL": {
+      const strike = decision.strikePrice || Math.round(analysis.currentPrice * 1.03);
+      const tradingsymbol = buildOptionSymbol(decision.symbol, strike, "CE");
+      return placeKiteOrder({
+        tradingsymbol,
+        exchange: "NFO",
+        transaction_type: "SELL",
+        order_type: "MARKET",
+        product: "NRML",
+        quantity,
+        tag: "IAW_SC",
+      }, accessToken, apiKey);
+    }
+    case "BUY_STOCK": {
+      return placeKiteOrder({
+        tradingsymbol: decision.symbol,
+        exchange: "NSE",
+        transaction_type: "BUY",
+        order_type: "MARKET",
+        product: "CNC",
+        quantity,
+        tag: "IAW_BUY",
+      }, accessToken, apiKey);
+    }
+    case "CLOSE": {
+      // For close, we need to determine if it's an option or equity position
+      // Default: buy back the option (assuming short option)
+      const strike = decision.strikePrice || Math.round(analysis.currentPrice);
+      // Try CE first, could be PE — the AI reasoning should guide this
+      const isCall = decision.reasoning?.toLowerCase().includes("call");
+      const optionType = isCall ? "CE" : "PE";
+      const tradingsymbol = buildOptionSymbol(decision.symbol, strike, optionType);
+      return placeKiteOrder({
+        tradingsymbol,
+        exchange: "NFO",
+        transaction_type: "BUY",
+        order_type: "MARKET",
+        product: "NRML",
+        quantity,
+        tag: "IAW_CLS",
+      }, accessToken, apiKey);
+    }
+    default:
+      return { success: false, orderId: null, error: `Unknown action: ${decision.action}` };
+  }
+  }
+}
+
 // ── AI Decision Engine ───────────────────────────────────────────────
 
 interface StockAnalysis {
