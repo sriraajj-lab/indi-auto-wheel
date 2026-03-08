@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useTradeNotifications } from '@/hooks/useTradeNotifications';
+import NotificationBell from '@/components/NotificationBell';
 import { Activity, LayoutDashboard, Settings, ScrollText, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -14,6 +16,7 @@ const navItems = [
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { signOut } = useAuth();
   const location = useLocation();
+  const { notifications, unreadCount, markAllRead, clearAll } = useTradeNotifications();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -45,10 +48,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               ))}
             </nav>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
-            <LogOut className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onOpen={markAllRead}
+              onClear={clearAll}
+            />
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </div>
         </div>
       </header>
 
