@@ -16,6 +16,7 @@ const navItems = [
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { signOut } = useAuth();
   const location = useLocation();
+  const { notifications, unreadCount, markAllRead, clearAll } = useTradeNotifications();
 
   return (
     <div className="min-h-screen flex flex-col">
