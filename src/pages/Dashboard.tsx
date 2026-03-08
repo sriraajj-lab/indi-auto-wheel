@@ -113,15 +113,37 @@ export default function Dashboard() {
             </span>
           </div>
         </div>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={handleEmergencyStop}
-          disabled={!botActive}
-        >
-          <StopCircle className="h-4 w-4 mr-1" />
-          Emergency Stop
-        </Button>
+        <div className="flex gap-2">
+          {settings?.emergency_stop ? (
+            <Button variant="profit" size="sm" onClick={handleResume}>
+              <Play className="h-4 w-4 mr-1" />
+              Resume Bot
+            </Button>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="danger" size="sm" disabled={!botActive}>
+                  <StopCircle className="h-4 w-4 mr-1" />
+                  Emergency Stop
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>🛑 Emergency Stop</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will immediately halt all bot trading activity. No new trades will be placed until you manually resume. Are you sure?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleEmergencyStop} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Stop All Trading
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
