@@ -7,6 +7,11 @@ import BotLogFeed from '@/components/dashboard/BotLogFeed';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Wallet, TrendingUp, TrendingDown, ShieldAlert,
   Activity, StopCircle, Play, Clock
 } from 'lucide-react';
