@@ -649,29 +649,46 @@ serve(async (req) => {
           continue;
         }
 
-        // TODO: Place actual order via Kite Connect API
-        // For now, log the trade as a paper trade
+        // Place order via Kite or paper trade
+        let orderResult: KiteOrderResult | null = null;
+        const isPaperTrade = useSimulated || !accessToken || !apiKey;
+
+        if (!isPaperTrade) {
+          orderResult = await executeKiteOrder(decision, analysis, accessToken!, apiKey!, settings);
+          if (!orderResult.success) {
+            await supabase.from("bot_logs").insert({
+              user_id: userId,
+              log_type: "ORDER_FAILED",
+              message: `${decision.action} ${decision.symbol} order failed: ${orderResult.error}`,
+              metadata: { decision, analysis, error: orderResult.error },
+            });
+            continue;
+          }
+        }
+
         const { error: tradeErr } = await supabase.from("trades").insert({
           user_id: userId,
           symbol: decision.symbol,
           trade_type: decision.action,
           entry_price: analysis.currentPrice,
           strike_price: decision.strikePrice || null,
-          quantity: decision.quantity || 1,
+          quantity: decision.quantity || getLotSize(decision.symbol),
           rsi_value: analysis.rsi,
           ema_cloud_status: analysis.emaCloud,
           ai_reasoning: decision.reasoning,
+          broker_order_id: orderResult?.orderId || null,
           status: "OPEN",
         });
 
         if (tradeErr) {
           console.error("Trade insert error:", tradeErr);
         } else {
+          const mode = isPaperTrade ? "📝 PAPER" : "🔴 LIVE";
           await supabase.from("bot_logs").insert({
             user_id: userId,
             log_type: "TRADE_EXECUTED",
-            message: `${decision.action} ${decision.symbol} @ ₹${analysis.currentPrice} | Strike: ₹${decision.strikePrice || "N/A"} | Confidence: ${(decision.confidence * 100).toFixed(0)}%`,
-            metadata: { decision, analysis },
+            message: `${mode} ${decision.action} ${decision.symbol} @ ₹${analysis.currentPrice} | Strike: ₹${decision.strikePrice || "N/A"} | Confidence: ${(decision.confidence * 100).toFixed(0)}%${orderResult?.orderId ? ` | Order: ${orderResult.orderId}` : ""}`,
+            metadata: { decision, analysis, orderResult, isPaperTrade },
           });
         }
       }
