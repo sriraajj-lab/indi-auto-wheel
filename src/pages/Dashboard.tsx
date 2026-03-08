@@ -195,6 +195,8 @@ export default function Dashboard() {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Bot Activity</h2>
         <BotLogFeed logs={logs} />
       </div>
+
+      <DemoTour open={showDemo} onOpenChange={setShowDemo} />
     </div>
   );
 }
