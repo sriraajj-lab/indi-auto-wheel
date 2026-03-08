@@ -116,6 +116,15 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDemo(true)}
+            className="gap-1 text-muted-foreground border-border hover:text-foreground"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Demo</span>
+          </Button>
           {settings?.emergency_stop ? (
             <Button variant="profit" size="sm" onClick={handleResume}>
               <Play className="h-4 w-4 mr-1" />
