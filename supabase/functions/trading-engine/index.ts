@@ -862,6 +862,19 @@ serve(async (req) => {
         const analysis = analyses.find((a) => a.symbol === decision.symbol);
         if (!analysis) continue;
 
+        // Sentiment gate: block bullish entries when news is bearish
+        const sentiment = analysis.newsSentiment;
+        const isBullishEntry = ["SELL_PUT", "BUY_STOCK"].includes(decision.action);
+        if (sentiment && sentiment.score < 0.3 && isBullishEntry) {
+          await supabase.from("bot_logs").insert({
+            user_id: userId,
+            log_type: "SENTIMENT_BLOCK",
+            message: `${decision.action} ${decision.symbol} BLOCKED — bearish news sentiment (${sentiment.score.toFixed(2)}): ${sentiment.summary}`,
+            metadata: { decision, sentiment },
+          });
+          continue;
+        }
+
         // Only execute high-confidence trades
         if (decision.confidence < 0.6) {
           await supabase.from("bot_logs").insert({
