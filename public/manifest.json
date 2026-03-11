@@ -1,0 +1,22 @@
+{
+  "name": "IndiAutoWheel",
+  "short_name": "IndiAutoWheel",
+  "description": "AI Options Trading Bot for Indian Markets",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#22c55e",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-152.png", "sizes": "152x152", "type": "image/png" },
+    { "src": "/icons/icon-144.png", "sizes": "144x144", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard", "url": "/", "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }] },
+    { "name": "Trade Log", "url": "/trade-log", "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }] },
+    { "name": "Settings", "url": "/settings", "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }] }
+  ]
+}
