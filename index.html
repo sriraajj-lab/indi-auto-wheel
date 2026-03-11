@@ -2,24 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
     <title>IndiAutoWheel — AI Options Trading Bot</title>
-    <meta name="description" content="Autonomous AI-powered options Wheel strategy bot for Indian markets. Cash-secured put selling with anti-loss protection.">
-    <meta name="author" content="IndiAutoWheel" />
-    
-    
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/96574c90-a2ea-4e72-8c19-d742bbaf391a/id-preview-1e5d1015--3dee13ec-e6f5-4170-9e52-f31690309465.lovable.app-1772959204883.png">
+    <meta name="description" content="Autonomous AI-powered options Wheel strategy bot for Indian markets.">
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/96574c90-a2ea-4e72-8c19-d742bbaf391a/id-preview-1e5d1015--3dee13ec-e6f5-4170-9e52-f31690309465.lovable.app-1772959204883.png">
-    <meta property="og:title" content="IndiAutoWheel — AI Options Trading Bot">
-  <meta name="twitter:title" content="IndiAutoWheel — AI Options Trading Bot">
-  <meta property="og:description" content="Autonomous AI-powered options Wheel strategy bot for Indian markets. Cash-secured put selling with anti-loss protection.">
-  <meta name="twitter:description" content="Autonomous AI-powered options Wheel strategy bot for Indian markets. Cash-secured put selling with anti-loss protection.">
-</head>
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
 
+    <!-- iPhone PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="IndiAutoWheel">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- iPhone icons -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png">
+
+    <!-- Theme color -->
+    <meta name="theme-color" content="#0d1117">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192.png">
+
+    <style>
+      * { -webkit-tap-highlight-color: transparent; }
+      html, body { overscroll-behavior: none; }
+    </style>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
