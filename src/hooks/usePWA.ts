@@ -48,4 +48,42 @@ export function usePWA() {
     }
 
     if ("Notification" in window) {
-      setNotificationsGranted(
+      setNotificationsGranted(Notification.permission === "granted");
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+    };
+  }, []);
+
+  const installApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    if (result.outcome === "accepted") setIsStandalone(true);
+    setDeferredPrompt(null);
+  };
+
+  const dismissIOSPrompt = () => {
+    setShowIOSPrompt(false);
+    localStorage.setItem("iaw_ios_prompt_dismissed", new Date().toISOString());
+  };
+
+  const requestNotifications = async () => {
+    if (!("Notification" in window)) return;
+    const perm = await Notification.requestPermission();
+    setNotificationsGranted(perm === "granted");
+  };
+
+  return {
+    deferredPrompt,
+    isStandalone,
+    isIOS,
+    showIOSPrompt,
+    swReady,
+    notificationsGranted,
+    installApp,
+    dismissIOSPrompt,
+    requestNotifications,
+  };
+}
