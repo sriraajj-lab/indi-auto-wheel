@@ -5,8 +5,8 @@ import { useState } from "react";
 
 export function InstallBanner() {
   const {
-    isInstalled, isIOS, canInstall, showIOSPrompt,
-    notificationsGranted, installPrompt,
+    isStandalone: isInstalled, isIOS, deferredPrompt: canInstall, showIOSPrompt,
+    notificationsGranted, installApp: installPrompt,
     requestNotifications, dismissIOSPrompt,
   } = usePWA();
 
