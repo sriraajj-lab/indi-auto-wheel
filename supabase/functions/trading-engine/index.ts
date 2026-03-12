@@ -611,7 +611,8 @@ serve(async (req) => {
       const useSimulated = testMode || !apiKey || !accessToken;
 
       // In production, skip users without broker creds
-      if (!testMode && !apiKey || !testMode && !accessToken) {
+      const paperMode = Deno.env.get("PAPER_MODE") === "true";
+if (!testMode && !paperMode && (!apiKey || !accessToken)) {
         await supabase.from("bot_logs").insert({
           user_id: userId,
           log_type: "ERROR",
